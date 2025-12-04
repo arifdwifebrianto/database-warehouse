@@ -138,7 +138,27 @@ END
 
 CREATE PROCEDURE show_all_lokasi_gudang ()
 BEGIN
-    SELECT * FROM Lokasi_Gudang;
+    SELECT
+        LG.id_lokasi,
+        LG.kode_lokasi,
+        LG.tipe_lokasi,
+        LG.kapasitas AS Kapasitas_Total,
+        
+        COALESCE(SUM(S.jumlah_stok), 0) AS Stok_Terisi,
+        
+        (LG.kapasitas - COALESCE(SUM(S.jumlah_stok), 0)) AS Kapasitas_Tersedia
+        
+    FROM
+        Lokasi_Gudang LG
+    LEFT JOIN
+        Stok S ON LG.id_lokasi = S.id_lokasi
+    
+    GROUP BY
+        LG.id_lokasi, LG.kode_lokasi, LG.tipe_lokasi, LG.kapasitas
+    
+    ORDER BY
+        LG.kode_lokasi;
+        
 END
 
 -- Update

@@ -138,7 +138,27 @@ END
 
 CREATE PROCEDURE show_all_lokasi_gudang ()
 BEGIN
-    SELECT * FROM Lokasi_Gudang;
+    SELECT
+        LG.id_lokasi,
+        LG.kode_lokasi,
+        LG.tipe_lokasi,
+        LG.kapasitas AS Kapasitas_Total,
+        
+        COALESCE(SUM(S.jumlah_stok), 0) AS Stok_Terisi,
+        
+        (LG.kapasitas - COALESCE(SUM(S.jumlah_stok), 0)) AS Kapasitas_Tersedia
+        
+    FROM
+        Lokasi_Gudang LG
+    LEFT JOIN
+        Stok S ON LG.id_lokasi = S.id_lokasi
+    
+    GROUP BY
+        LG.id_lokasi, LG.kode_lokasi, LG.tipe_lokasi, LG.kapasitas
+    
+    ORDER BY
+        LG.kode_lokasi;
+        
 END
 
 -- Update
@@ -419,4 +439,53 @@ BEGIN
         COMMIT;
     
     END IF;
+END
+
+-- LAPORAN STATISTIK GUDANG
+CREATE PROCEDURE SP_LaporanStatistikGudang ()
+BEGIN
+
+    SELECT
+        COUNT(DISTINCT P.id_produk) AS Total_Produk_Unik,
+        COALESCE(SUM(S.jumlah_stok), 0) AS Total_Unit_Stok,
+        COALESCE(SUM(S.jumlah_stok * P.harga_beli), 0) AS Total_Nilai_Inventaris_Beli
+    FROM
+        Produk P
+    LEFT JOIN
+        Stok S ON P.id_produk = S.id_produk;
+
+    SELECT
+        COUNT(CASE WHEN PM.status = 'Diterima Penuh' AND PM.tanggal_masuk >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) AS PO_Selesai_30Hari,
+        COUNT(CASE WHEN PK.status = 'Dikirim' AND PK.tanggal_keluar >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) AS SO_Dikirim_30Hari
+    FROM
+        Pemesanan_Masuk PM
+    CROSS JOIN
+        Pemesanan_Keluar PK;
+
+    SELECT
+        SUM(LG.kapasitas) AS Total_Kapasitas_Global,
+        COALESCE(SUM(S.jumlah_stok), 0) AS Total_Stok_Terisi,
+        (SUM(LG.kapasitas) - COALESCE(SUM(S.jumlah_stok), 0)) AS Sisa_Kapasitas_Global
+    FROM
+        Lokasi_Gudang LG
+    LEFT JOIN
+        Stok S ON LG.id_lokasi = S.id_lokasi;
+
+    CALL show_all_lokasi_gudang();
+
+    SELECT
+        S.nama_supplier,
+        COALESCE(SUM(DM.kuantitas_diterima), 0) AS Total_Unit_Diterima
+    FROM
+        Supplier S
+    JOIN
+        Pemesanan_Masuk PM ON S.id_supplier = PM.id_supplier
+    JOIN
+        Detail_Masuk DM ON PM.id_masuk = DM.id_masuk
+    GROUP BY
+        S.nama_supplier
+    ORDER BY
+        Total_Unit_Diterima DESC
+    LIMIT 5;
+
 END

@@ -356,7 +356,7 @@ CREATE PROCEDURE delete_pemesanan_keluar (
     IN p_id INT
 )
 BEGIN
-    DELETE FROM PemesananKeluar WHERE id_keluar = p_id;
+    DELETE FROM Pemesanan_Keluar WHERE id_keluar = p_id;
 END
 
 -- BARANG MASUK (PEMESANAN_MASUK + DETAIL_MASUK)
@@ -371,7 +371,7 @@ BEGIN
     
     START TRANSACTION;
 
-    INSERT INTO DetailMasuk (id_masuk, id_produk, kuantitas_diterima) 
+    INSERT INTO Detail_Masuk (id_masuk, id_produk, kuantitas_diterima) 
     VALUES (p_id_masuk, p_id_produk, p_kuantitas);
 
     SELECT COUNT(*) INTO existing_stok 
@@ -413,7 +413,7 @@ BEGIN
         SET jumlah_stok = jumlah_stok - p_kuantitas
         WHERE id_produk = p_id_produk AND id_lokasi = p_id_lokasi_ambil;
 
-        INSERT INTO DetailKeluar (id_keluar, id_produk, kuantitas_diminta) 
+        INSERT INTO Detail_Keluar (id_keluar, id_produk, kuantitas_diminta) 
         VALUES (p_id_keluar, p_id_produk, p_kuantitas);
         
         COMMIT;
